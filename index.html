@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Palugada ERP - Neon Glass</title>
     
     <!-- Tailwind CSS -->
@@ -117,9 +117,17 @@
             background: rgba(5, 5, 17, 0.8);
             backdrop-filter: blur(8px);
         }
+        
+        /* Safe Area Padding untuk HP (Poni/Dynamic Island) */
+        .safe-top {
+            padding-top: max(env(safe-area-inset-top), 1rem);
+        }
+        .safe-bottom {
+            padding-bottom: max(env(safe-area-inset-bottom), 1rem);
+        }
     </style>
 </head>
-<body class="h-screen overflow-hidden flex flex-col font-sans relative">
+<body class="h-[100dvh] overflow-hidden flex flex-col font-sans relative">
 
     <!-- Ambient Glows -->
     <div class="ambient-glow-1"></div>
@@ -207,7 +215,7 @@
     </div>
 
     <!-- MAIN APP LAYOUT -->
-    <div id="main-app" class="flex h-screen w-full hide overflow-hidden relative z-10">
+    <div id="main-app" class="flex h-[100dvh] w-full hide overflow-hidden relative z-10">
         
         <!-- Mobile Sidebar Backdrop -->
         <div id="sidebar-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hide md:hidden" onclick="toggleSidebar()"></div>
@@ -260,7 +268,7 @@
         <main class="flex-1 h-full overflow-y-auto relative flex flex-col z-10">
             
             <!-- Mobile Header Top Bar -->
-            <header class="md:hidden bg-[#070b14]/80 backdrop-blur-xl border-b border-white/10 px-5 py-3.5 flex items-center justify-between shadow-sm sticky top-0 z-30">
+            <header class="md:hidden bg-[#070b14]/80 backdrop-blur-xl border-b border-white/10 px-5 pb-3.5 safe-top flex items-center justify-between shadow-sm sticky top-0 z-30">
                 <div class="flex items-center gap-3">
                     <img id="mobile-header-logo" src="https://cdn-icons-png.flaticon.com/512/2942/2942821.png" class="w-8 h-8 object-contain bg-white/10 rounded-lg p-1 shrink-0 border border-white/20">
                     <h1 id="mobile-header-appname" class="font-bold text-lg text-white truncate drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]">Palugada</h1>
@@ -270,7 +278,7 @@
                 </button>
             </header>
 
-            <div class="p-5 md:p-8 max-w-7xl mx-auto w-full">
+            <div class="p-5 md:p-8 max-w-7xl mx-auto w-full safe-bottom">
                 
                 <!-- VIEW: DASHBOARD -->
                 <div id="view-dashboard" class="page-view fade-in">
