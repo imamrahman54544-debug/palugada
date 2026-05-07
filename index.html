@@ -767,7 +767,16 @@
                 // Sinkronisasi Real-time
                 onSnapshot(firestoreDocRef, (docSnap) => {
                     if (docSnap.exists()) {
-                        db = docSnap.data().dbData;
+                        // Clone the data to avoid reference issues
+                        db = JSON.parse(JSON.stringify(docSnap.data().dbData));
+                        
+                        // Ensure all arrays exist even if empty in cloud
+                        if(!db.orders) db.orders = [];
+                        if(!db.finance) db.finance = [];
+                        if(!db.archive) db.archive = [];
+                        if(!db.users) db.users = [];
+                        if(!db.settings) db.settings = { appName: 'Palugada', company: 'Percetakan Palugada', wa: '08123456789', logo: 'https://cdn-icons-png.flaticon.com/512/2942/2942821.png' };
+
                         // Update UI otomatis jika ada data baru masuk
                         if(currentUser && !document.getElementById('main-app').classList.contains('hide')) {
                             updateUserUI();
@@ -778,10 +787,11 @@
                             renderCRM();
                         }
                     } else {
+                        // Initialize empty DB in cloud if it doesn't exist
                         if(db.users.length === 0) {
                             db.users.push({ name: 'Admin Utama', email: 'admin@palugada.com', pass: '123', role: 'Admin' });
-                            saveDB();
                         }
+                        saveDB(); // This will create the document
                     }
 
                     document.getElementById('loadingOverlay').classList.add('hide');
@@ -827,13 +837,29 @@
         }
 
         function saveDB() {
+            // Force pure data object (remove undefined/functions)
+            const cleanDb = JSON.parse(JSON.stringify(db));
+            
             // Backup ke localStorage
-            localStorage.setItem('palugadaDB', JSON.stringify(db));
+            localStorage.setItem('palugadaDB', JSON.stringify(cleanDb));
 
             // Simpan ke Cloud secara otomatis
             if(fbUser && firestoreDocRef) {
                 import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js").then(({setDoc}) => {
-                    setDoc(firestoreDocRef, { dbData: db }).catch(e => console.error("Gagal simpan ke cloud", e));
+                    setDoc(firestoreDocRef, { dbData: cleanDb }, { merge: true })
+                    .catch(e => {
+                        console.error("Gagal simpan ke cloud", e);
+                        Swal.fire({
+                            title: 'Gagal Menyimpan ke Cloud',
+                            text: 'Cek koneksi internet Anda atau aturan keamanan Firebase.',
+                            icon: 'error',
+                            toast: true,
+                            position: 'top-end',
+                            timer: 3000,
+                            showConfirmButton: false,
+                            background: '#0f172a', color: '#fff'
+                        });
+                    });
                 });
             }
         }
@@ -1155,7 +1181,7 @@
             closeModal('modal-order');
             document.getElementById('form-order').reset();
             renderOrders();
-            Swal.fire({ title: 'Berhasil', text: 'Pesanan ditambahkan', icon: 'success', timer: 1500, showConfirmButton: false });
+            Swal.fire({ title: 'Berhasil', text: 'Pesanan ditambahkan', icon: 'success', timer: 1500, showConfirmButton: false, background: '#0f172a', color: '#fff' });
         }
 
         function updateOrderStatus(id, newStatus) {
@@ -1168,7 +1194,7 @@
 
         function deleteOrder(id) {
             Swal.fire({
-                title: 'Hapus Pesanan?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#f43f5e', text: 'Data tidak bisa dikembalikan.'
+                title: 'Hapus Pesanan?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#f43f5e', text: 'Data tidak bisa dikembalikan.', background: '#0f172a', color: '#fff'
             }).then((result) => {
                 if (result.isConfirmed) {
                     db.orders = db.orders.filter(o => o.id !== id);
@@ -1273,11 +1299,11 @@
             closeModal('modal-finance');
             document.getElementById('form-finance').reset();
             renderFinance();
-            Swal.fire({ title: 'Tersimpan', icon: 'success', timer: 1000, showConfirmButton: false });
+            Swal.fire({ title: 'Tersimpan', icon: 'success', timer: 1000, showConfirmButton: false, background: '#0f172a', color: '#fff' });
         }
 
         function deleteFinance(id) {
-            Swal.fire({ title: 'Hapus Transaksi?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#f43f5e' })
+            Swal.fire({ title: 'Hapus Transaksi?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#f43f5e', background: '#0f172a', color: '#fff' })
             .then(res => {
                 if(res.isConfirmed) {
                     db.finance = db.finance.filter(f => f.id !== id);
@@ -1307,7 +1333,7 @@
                             </td>
                             <td class="p-5 text-gray-400">${arc.size}</td>
                             <td class="p-5 text-right">
-                                <button class="text-cyan-400 hover:text-cyan-300 mr-3 px-2 py-1 rounded bg-cyan-500/10 transition" onclick="Swal.fire('Info', 'Simulasi download', 'info')"><i class="fa-solid fa-download"></i></button>
+                                <button class="text-cyan-400 hover:text-cyan-300 mr-3 px-2 py-1 rounded bg-cyan-500/10 transition" onclick="Swal.fire({title: 'Info', text: 'Simulasi download', icon: 'info', background: '#0f172a', color: '#fff'})"><i class="fa-solid fa-download"></i></button>
                                 <button class="text-rose-400 hover:text-rose-300 px-2 py-1 rounded bg-rose-500/10 transition" onclick="deleteArchive('${arc.id}')"><i class="fa-solid fa-trash"></i></button>
                             </td>
                         </tr>
@@ -1336,7 +1362,7 @@
             closeModal('modal-upload');
             document.getElementById('form-upload').reset();
             renderArchive();
-            Swal.fire('Berhasil', 'Dokumen tersimpan ke Arsip', 'success');
+            Swal.fire({title: 'Berhasil', text: 'Dokumen tersimpan ke Arsip', icon: 'success', background: '#0f172a', color: '#fff'});
         }
 
         function deleteArchive(id) {
@@ -1424,7 +1450,7 @@
             saveDB();
             applySettings();
             
-            Swal.fire({ title: 'Disimpan', text: 'Konfigurasi sistem diperbarui', icon: 'success', timer: 1500 });
+            Swal.fire({ title: 'Disimpan', text: 'Konfigurasi sistem diperbarui', icon: 'success', timer: 1500, background: '#0f172a', color: '#fff' });
         }
 
         function applySettings() {
