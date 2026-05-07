@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Palugada ERP - Neon Glass</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome / Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        slate: { 50: '#f8fafc', 800: '#1e293b' },
+                        brand: { 500: '#06b6d4', 600: '#0891b2' } /* Cyan as primary neon */
+                    },
+                    boxShadow: {
+                        'neon-cyan': '0 0 15px rgba(6, 182, 212, 0.4)',
+                        'neon-fuchsia': '0 0 15px rgba(217, 70, 239, 0.4)',
+                        'neon-emerald': '0 0 15px rgba(16, 185, 129, 0.4)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            background-color: #050511; /* Deep dark blue */
+            color: #e2e8f0; 
+        }
+        
+        /* Ambient Background Glows */
+        .ambient-glow-1 {
+            position: fixed; top: -10%; left: -10%; width: 50vw; height: 50vw;
+            border-radius: 50%; background: radial-gradient(circle, rgba(6,182,212,0.15) 0%, rgba(0,0,0,0) 70%);
+            pointer-events: none; z-index: 0;
+        }
+        .ambient-glow-2 {
+            position: fixed; bottom: -10%; right: -10%; width: 50vw; height: 50vw;
+            border-radius: 50%; background: radial-gradient(circle, rgba(217,70,239,0.1) 0%, rgba(0,0,0,0) 70%);
+            pointer-events: none; z-index: 0;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: rgba(7, 11, 20, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .neon-card {
+            background: rgba(13, 17, 30, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(6, 182, 212, 0.15);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(6, 182, 212, 0.05);
+            transition: all 0.3s ease;
+        }
+        .neon-card:hover {
+            border-color: rgba(6, 182, 212, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), 0 0 20px rgba(6, 182, 212, 0.2), inset 0 0 15px rgba(6, 182, 212, 0.1);
+        }
+        
+        /* Input Fields */
+        .input-neon {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px; padding: 12px 16px; width: 100%;
+            color: #f8fafc; transition: all 0.3s; outline: none;
+        }
+        .input-neon:focus {
+            background: rgba(0, 0, 0, 0.6);
+            border-color: #06b6d4;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+        }
+        .input-neon::placeholder { color: #64748b; }
+        
+        /* Select & Options styling */
+        select.input-neon option { background: #0f172a; color: #fff; }
+
+        .hide { display: none !important; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(6,182,212,0.3); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);}
+        ::-webkit-scrollbar-thumb:hover { background: rgba(6,182,212,0.6); }
+
+        /* SweetAlert Neon Override */
+        .swal2-popup {
+            background: rgba(13, 17, 30, 0.95) !important; backdrop-filter: blur(16px) !important;
+            border: 1px solid rgba(6, 182, 212, 0.3) !important; border-radius: 24px !important;
+            box-shadow: 0 0 30px rgba(6, 182, 212, 0.2) !important; color: #fff !important;
+        }
+        .swal2-title, .swal2-html-container { color: #f8fafc !important; }
+        
+        /* Modal Backdrop */
+        .modal-backdrop {
+            background: rgba(5, 5, 17, 0.8);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex flex-col font-sans relative">
+
+    <!-- Ambient Glows -->
+    <div class="ambient-glow-1"></div>
+    <div class="ambient-glow-2"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-[#050511]/90 backdrop-blur-md z-[9999] flex flex-col justify-center items-center hide">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.5)] mb-4"></div>
+        <p class="text-cyan-300 font-medium tracking-widest uppercase text-xs drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]" id="loading-text">Memuat Data...</p>
+    </div>
+
+    <!-- VIEW: LOGIN -->
+    <div id="view-login" class="fixed inset-0 bg-transparent z-[100] flex justify-center items-center fade-in">
+        <div class="neon-card p-10 w-full max-w-md text-center mx-4 relative z-10">
+            <img id="login-logo" src="https://cdn-icons-png.flaticon.com/512/2942/2942821.png" alt="Logo" class="w-20 h-20 mx-auto mb-6 object-contain bg-white/10 backdrop-blur-md rounded-2xl p-2 border border-white/20">
+            <h2 class="text-2xl font-bold mb-2 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">Selamat Datang</h2>
+            <p id="login-subtitle" class="text-sm text-gray-400 mb-8">Masuk ke Sistem ERP</p>
+            
+            <form id="form-login" onsubmit="handleLogin(event)">
+                <div class="mb-4 text-left">
+                    <label class="block text-xs font-semibold text-cyan-300 uppercase tracking-wider mb-1 ml-1">Email</label>
+                    <input type="email" id="login-email" class="input-neon" required placeholder="admin@palugada.com">
+                </div>
+                <div class="mb-6 text-left">
+                    <label class="block text-xs font-semibold text-cyan-300 uppercase tracking-wider mb-1 ml-1">Password</label>
+                    <input type="password" id="login-pass" class="input-neon" required placeholder="123">
+                </div>
+                <button type="submit" class="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 rounded-xl transition shadow-[0_0_15px_rgba(6,182,212,0.5)] hover:shadow-[0_0_25px_rgba(6,182,212,0.8)]">
+                    Masuk ke Sistem
+                </button>
+            </form>
+            
+            <div class="mt-6 pt-6 border-t border-white/10">
+                <p class="text-sm text-gray-400">Belum punya akun? <button type="button" onclick="showRegister()" class="text-fuchsia-400 font-bold hover:text-fuchsia-300 drop-shadow-[0_0_5px_rgba(217,70,239,0.5)]">Daftar di sini</button></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW: REGISTER -->
+    <div id="view-register" class="fixed inset-0 bg-transparent z-[100] flex justify-center items-center hide fade-in overflow-y-auto py-10">
+        <div class="neon-card p-10 w-full max-w-lg text-center mx-4 my-auto relative z-10">
+            <img id="reg-logo" src="https://cdn-icons-png.flaticon.com/512/2942/2942821.png" alt="Logo" class="w-16 h-16 mx-auto mb-4 object-contain bg-white/10 backdrop-blur-md rounded-xl p-2 border border-white/20">
+            <h2 class="text-2xl font-bold mb-2 text-white">Buat Akun Baru</h2>
+            <p class="text-sm text-gray-400 mb-8">Bergabung dengan Jaringan</p>
+            
+            <form id="form-register" onsubmit="handleRegister(event)">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div class="text-left">
+                        <label class="block text-xs font-semibold text-cyan-300 uppercase tracking-wider mb-1 ml-1">Nama Lengkap <span class="text-rose-500">*</span></label>
+                        <input type="text" id="reg-name" class="input-neon" required>
+                    </div>
+                    <div class="text-left">
+                        <label class="block text-xs font-semibold text-cyan-300 uppercase tracking-wider mb-1 ml-1">Nomor WhatsApp</label>
+                        <input type="text" id="reg-wa" class="input-neon">
+                    </div>
+                </div>
+                
+                <div class="mb-4 text-left">
+                    <label class="block text-xs font-semibold text-cyan-300 uppercase tracking-wider mb-1 ml-1">Daftar Sebagai (Role) <span class="text-rose-500">*</span></label>
+                    <select id="reg-role" class="input-neon font-medium" required>
+                        <option value="Admin">Administrator</option>
+                        <option value="Kasir">Kasir</option>
+                        <option value="Karyawan">Staf / Karyawan</option>
+                    </select>
+                </div>
+
+                <div class="mb-4 text-left">
+                    <label class="block text-xs font-semibold text-cyan-300 uppercase tracking-wider mb-1 ml-1">Email <span class="text-rose-500">*</span></label>
+                    <input type="email" id="reg-email" class="input-neon" required>
+                </div>
+                <div class="mb-8 text-left">
+                    <label class="block text-xs font-semibold text-cyan-300 uppercase tracking-wider mb-1 ml-1">Password <span class="text-rose-500">*</span></label>
+                    <input type="password" id="reg-pass" class="input-neon" required>
+                </div>
+                
+                <button type="submit" class="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 rounded-xl transition shadow-[0_0_15px_rgba(6,182,212,0.5)]">
+                    Daftar Sekarang
+                </button>
+            </form>
+            
+            <div class="mt-6 pt-6 border-t border-white/10">
+                <p class="text-sm text-gray-400">Sudah punya akun? <button type="button" onclick="showLogin()" class="text-cyan-400 font-bold hover:text-cyan-300 drop-shadow-[0_0_5px_rgba(6,182,212,0.5)]">Masuk ke sistem</button></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP LAYOUT -->
+    <div id="main-app" class="flex h-screen w-full hide overflow-hidden relative z-10">
+        
+        <!-- Mobile Sidebar Backdrop -->
+        <div id="sidebar-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hide md:hidden" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside id="app-sidebar" class="fixed inset-y-0 left-0 z-50 w-72 md:w-64 glass-panel h-full flex flex-col shadow-2xl transition-transform duration-300 transform -translate-x-full md:relative md:translate-x-0">
+            <div class="p-6 flex items-center justify-between border-b border-white/10">
+                <div class="flex items-center gap-3">
+                    <img id="sidebar-logo" src="https://cdn-icons-png.flaticon.com/512/2942/2942821.png" class="w-9 h-9 object-contain bg-white/10 backdrop-blur border border-white/20 rounded-lg p-1 shrink-0">
+                    <h1 id="sidebar-appname" class="font-bold text-lg text-white tracking-wide truncate drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]">Palugada</h1>
+                </div>
+                <button onclick="toggleSidebar()" class="md:hidden text-gray-400 hover:text-white bg-white/5 w-8 h-8 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+                <button onclick="navigate('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-400 hover:text-gray-200 hover:bg-white/5 transition nav-btn active-nav">
+                    <i class="fa-solid fa-chart-pie w-5"></i> <span class="font-medium tracking-wide">Dashboard</span>
+                </button>
+                <button onclick="navigate('orders')" id="nav-orders" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-400 hover:text-gray-200 hover:bg-white/5 transition nav-btn">
+                    <i class="fa-solid fa-box-open w-5"></i> <span class="font-medium tracking-wide">Pesanan</span>
+                </button>
+                <button onclick="navigate('finance')" id="nav-finance" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-400 hover:text-gray-200 hover:bg-white/5 transition nav-btn">
+                    <i class="fa-solid fa-wallet w-5"></i> <span class="font-medium tracking-wide">Keuangan</span>
+                </button>
+                <button onclick="navigate('arsip')" id="nav-arsip" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-400 hover:text-gray-200 hover:bg-white/5 transition nav-btn">
+                    <i class="fa-regular fa-folder-open w-5"></i> <span class="font-medium tracking-wide">Arsip</span>
+                </button>
+                <button onclick="navigate('crm')" id="nav-crm" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-400 hover:text-gray-200 hover:bg-white/5 transition nav-btn">
+                    <i class="fa-solid fa-users w-5"></i> <span class="font-medium tracking-wide">Pelanggan</span>
+                </button>
+                <button onclick="navigate('settings')" id="nav-settings" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-400 hover:text-gray-200 hover:bg-white/5 transition nav-btn">
+                    <i class="fa-solid fa-gear w-5"></i> <span class="font-medium tracking-wide">Pengaturan</span>
+                </button>
+            </nav>
+
+            <div class="p-4 border-t border-white/10">
+                <div class="flex items-center gap-3 px-4 py-2 bg-white/5 rounded-xl border border-white/5">
+                    <div class="w-8 h-8 rounded-full bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center font-bold text-sm shrink-0 shadow-[0_0_10px_rgba(217,70,239,0.3)] border border-fuchsia-500/30" id="user-initial">A</div>
+                    <div class="flex-1 overflow-hidden">
+                        <p class="text-sm font-semibold truncate text-white" id="user-name">Admin</p>
+                        <p class="text-[10px] text-cyan-400 truncate uppercase tracking-widest" id="user-role">Online</p>
+                    </div>
+                    <button onclick="doLogout()" class="text-gray-500 hover:text-rose-400 hover:drop-shadow-[0_0_5px_rgba(244,63,94,0.5)] transition shrink-0" title="Logout"><i class="fa-solid fa-power-off"></i></button>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 h-full overflow-y-auto relative flex flex-col z-10">
+            
+            <!-- Mobile Header Top Bar -->
+            <header class="md:hidden bg-[#070b14]/80 backdrop-blur-xl border-b border-white/10 px-5 py-3.5 flex items-center justify-between shadow-sm sticky top-0 z-30">
+                <div class="flex items-center gap-3">
+                    <img id="mobile-header-logo" src="https://cdn-icons-png.flaticon.com/512/2942/2942821.png" class="w-8 h-8 object-contain bg-white/10 rounded-lg p-1 shrink-0 border border-white/20">
+                    <h1 id="mobile-header-appname" class="font-bold text-lg text-white truncate drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]">Palugada</h1>
+                </div>
+                <button onclick="toggleSidebar()" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-cyan-400 hover:bg-white/10 transition border border-cyan-500/30">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </header>
+
+            <div class="p-5 md:p-8 max-w-7xl mx-auto w-full">
+                
+                <!-- VIEW: DASHBOARD -->
+                <div id="view-dashboard" class="page-view fade-in">
+                    <header class="mb-6 md:mb-8">
+                        <h2 class="text-2xl md:text-4xl font-extrabold text-white tracking-tight leading-snug drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" id="greet-text">Selamat datang, Admin</h2>
+                        <p class="text-cyan-400/70 mt-1 md:mt-2 text-sm md:text-lg font-medium tracking-wide">Analisis Data Matrix Aktif.</p>
+                    </header>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-6 md:mb-10">
+                        <div class="neon-card p-6 md:p-8 flex items-center gap-4 md:gap-6">
+                            <div class="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-2xl md:text-3xl shrink-0 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.4)]">
+                                <i class="fa-solid fa-wallet"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] md:text-xs font-bold text-cyan-300/70 uppercase tracking-widest mb-1">Total Pendapatan</p>
+                                <h3 class="text-2xl md:text-4xl font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" id="dash-pendapatan">Rp 0</h3>
+                            </div>
+                        </div>
+                        <div class="neon-card p-6 md:p-8 flex items-center gap-4 md:gap-6">
+                            <div class="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center text-2xl md:text-3xl shrink-0 border border-fuchsia-500/30 shadow-[0_0_15px_rgba(217,70,239,0.4)]">
+                                <i class="fa-solid fa-bag-shopping"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] md:text-xs font-bold text-fuchsia-300/70 uppercase tracking-widest mb-1">Total Pesanan</p>
+                                <h3 class="text-2xl md:text-4xl font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"><span id="dash-pesanan">0</span> <span class="text-sm md:text-lg text-gray-400 font-medium">Pesanan</span></h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="neon-card p-6 md:p-8 mb-8">
+                        <div class="mb-6 md:mb-8">
+                            <h3 class="text-xl md:text-2xl font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]">Siklus Penjualan</h3>
+                        </div>
+                        <div class="h-64 md:h-72 w-full relative border-b border-white/10 pb-8 mb-8">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                            <div>
+                                <h4 class="text-2xl md:text-3xl font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]" id="stat-semua">0</h4>
+                                <p class="text-xs md:text-sm font-medium text-gray-500 mt-1 md:mt-2 uppercase tracking-wider">Semua</p>
+                            </div>
+                            <div>
+                                <h4 class="text-2xl md:text-3xl font-bold text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]" id="stat-baru">0</h4>
+                                <p class="text-xs md:text-sm font-medium text-gray-500 mt-1 md:mt-2 uppercase tracking-wider">Baru</p>
+                            </div>
+                            <div>
+                                <h4 class="text-2xl md:text-3xl font-bold text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" id="stat-proses">0</h4>
+                                <p class="text-xs md:text-sm font-medium text-gray-500 mt-1 md:mt-2 uppercase tracking-wider">Proses</p>
+                            </div>
+                            <div>
+                                <h4 class="text-2xl md:text-3xl font-bold text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]" id="stat-selesai">0</h4>
+                                <p class="text-xs md:text-sm font-medium text-gray-500 mt-1 md:mt-2 uppercase tracking-wider">Selesai</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: ORDERS -->
+                <div id="view-orders" class="page-view hide fade-in">
+                    <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
+                        <div>
+                            <h2 class="text-3xl font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]">Manajemen Pesanan</h2>
+                            <p class="text-gray-400 mt-1">Sistem pelacakan transaksi terpadu.</p>
+                        </div>
+                        <button onclick="openModal('modal-order')" class="w-full md:w-auto bg-cyan-500 hover:bg-cyan-400 text-black px-5 py-3 md:py-2.5 rounded-xl font-bold shadow-[0_0_15px_rgba(6,182,212,0.5)] transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Transaksi Baru
+                        </button>
+                    </div>
+
+                    <div id="grid-orders" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        <!-- Cards Rendered via JS -->
+                    </div>
+                    <div id="orders-empty" class="p-16 flex flex-col items-center justify-center text-gray-600 hide">
+                        <i class="fa-solid fa-box-open text-5xl mb-4 drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]"></i>
+                        <p class="text-lg font-medium">Belum ada pesanan</p>
+                    </div>
+                </div>
+
+                <!-- VIEW: FINANCE -->
+                <div id="view-finance" class="page-view hide fade-in">
+                    <div id="finance-content" class="fade-in">
+                        <div class="flex justify-between items-start mb-6">
+                            <div>
+                                <h2 class="text-3xl font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]">Laporan Keuangan</h2>
+                                <p class="text-gray-400 mt-1">Arus kas dan neraca sistem.</p>
+                            </div>
+                        </div>
+
+                        <div class="inline-flex bg-[#0a0f1d]/60 backdrop-blur border border-cyan-500/30 rounded-full p-1.5 mb-8 shadow-[0_0_10px_rgba(6,182,212,0.1)] flex-wrap md:flex-nowrap gap-1">
+                            <button onclick="switchFinanceTab('ringkasan')" id="tab-ringkasan" class="px-6 py-2 rounded-full bg-cyan-500 text-black font-bold text-sm transition shadow-[0_0_10px_rgba(6,182,212,0.5)]">Ringkasan</button>
+                            <button onclick="switchFinanceTab('bukukas')" id="tab-bukukas" class="px-6 py-2 rounded-full text-gray-400 font-medium text-sm hover:text-white transition hover:bg-white/5">Buku Kas</button>
+                            <button onclick="switchFinanceTab('rekening')" id="tab-rekening" class="px-6 py-2 rounded-full text-gray-400 font-medium text-sm hover:text-white transition hover:bg-white/5">Rekening</button>
+                        </div>
+
+                        <!-- TAB: RINGKASAN -->
+                        <div id="fin-tab-ringkasan" class="grid grid-cols-1 md:grid-cols-3 gap-6 fade-in">
+                            <div class="neon-card p-6 flex flex-col justify-between min-h-[220px]">
+                                <div class="flex justify-between items-start mb-6">
+                                    <div class="w-12 h-12 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center text-xl shadow-[0_0_10px_rgba(6,182,212,0.3)]"><i class="fa-solid fa-vault"></i></div>
+                                    <span class="text-[10px] font-bold text-cyan-300 bg-cyan-900/30 px-3 py-1.5 rounded-lg border border-cyan-500/30">Total Aset Kas</span>
+                                </div>
+                                <div>
+                                    <p class="text-[11px] font-bold text-cyan-500 uppercase tracking-widest mb-1">Saldo Keseluruhan</p>
+                                    <h3 class="text-3xl font-bold text-white tracking-tight drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]" id="fin-tot-aset">Rp 0</h3>
+                                </div>
+                            </div>
+                            
+                            <div class="neon-card p-6 flex flex-col justify-between border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)] min-h-[220px]">
+                                <div class="flex justify-between items-start mb-6">
+                                    <div class="w-12 h-12 rounded-xl border border-emerald-500/30 bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl shadow-[0_0_10px_rgba(16,185,129,0.3)]"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                                    <span class="text-[10px] font-bold text-emerald-300 bg-emerald-900/30 px-3 py-1.5 rounded-lg border border-emerald-500/30">Rekap Profit</span>
+                                </div>
+                                <div>
+                                    <p class="text-[11px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Est. Laba Bersih</p>
+                                    <h3 class="text-3xl font-bold text-emerald-400 tracking-tight drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]" id="fin-tot-laba">Rp 0</h3>
+                                </div>
+                            </div>
+
+                            <div class="neon-card p-6 border border-fuchsia-500/30 min-h-[260px] shadow-[0_0_20px_rgba(217,70,239,0.15)] flex flex-col justify-between relative overflow-hidden">
+                                <div class="absolute -right-10 -top-10 w-32 h-32 bg-fuchsia-600/20 blur-[40px] pointer-events-none"></div>
+                                <div class="flex justify-between items-start mb-6 relative z-10">
+                                    <h4 class="text-lg font-bold text-white leading-snug drop-shadow-[0_0_5px_rgba(255,255,255,0.4)]">Rincian Posisi<br>Keuangan</h4>
+                                    <i class="fa-regular fa-wallet text-fuchsia-400/50 text-2xl"></i>
+                                </div>
+                                <div class="space-y-4 relative z-10">
+                                    <div>
+                                        <p class="text-[11px] text-gray-400 mb-0.5">Di Bank / Transfer</p>
+                                        <h4 class="text-xl font-bold text-cyan-300 drop-shadow-[0_0_5px_rgba(6,182,212,0.5)]" id="fin-det-bank">Rp 0</h4>
+                                    </div>
+                                    <div>
+                                        <p class="text-[11px] text-gray-400 mb-0.5">Kas Tunai / Laci</p>
+                                        <h4 class="text-xl font-bold text-cyan-300 drop-shadow-[0_0_5px_rgba(6,182,212,0.5)]" id="fin-det-kas">Rp 0</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB: BUKU KAS -->
+                        <div id="fin-tab-bukukas" class="neon-card p-6 md:p-8 hide fade-in">
+                            <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8 pb-4 border-b border-white/10">
+                                <h3 class="text-xl font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]">Data Arus Kas</h3>
+                                <button onclick="openModal('modal-finance')" class="w-full md:w-auto bg-fuchsia-500 hover:bg-fuchsia-400 text-black px-5 py-2.5 rounded-full font-bold shadow-[0_0_15px_rgba(217,70,239,0.5)] transition flex items-center justify-center gap-2 text-sm">
+                                    <i class="fa-solid fa-plus"></i> Catat Baru
+                                </button>
+                            </div>
+                            <div id="fin-list-container" class="space-y-3">
+                                <!-- Finance items rendered via JS -->
+                            </div>
+                            <div id="finance-empty" class="p-10 flex flex-col items-center justify-center text-gray-600 hide">
+                                <p class="text-sm font-medium">Buku kas kosong</p>
+                            </div>
+                        </div>
+
+                        <!-- TAB: REKENING -->
+                        <div id="fin-tab-rekening" class="hide fade-in">
+                            <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
+                                <h3 class="text-2xl font-bold text-white">Dompet & Rekening</h3>
+                                <button onclick="Swal.fire('Info', 'Fitur tambah rekening kustom akan segera hadir.', 'info')" class="w-full md:w-auto bg-white/5 border border-cyan-500/30 text-cyan-400 px-5 py-2.5 rounded-full font-medium shadow-[0_0_10px_rgba(6,182,212,0.2)] hover:bg-cyan-500/10 transition flex items-center justify-center gap-2 text-sm">
+                                    <i class="fa-solid fa-plus"></i> Tambah Baru
+                                </button>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="neon-card p-6 flex flex-col min-h-[180px]">
+                                    <div class="flex justify-between items-start mb-auto">
+                                        <div class="w-12 h-12 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.3)]"><i class="fa-solid fa-building-columns"></i></div>
+                                        <span class="text-[10px] font-bold text-blue-300 bg-blue-900/30 border border-blue-500/30 px-3 py-1 rounded-md">Bank</span>
+                                    </div>
+                                    <div class="mt-4">
+                                        <h4 class="text-lg font-bold text-white mb-2">Kasir BCA</h4>
+                                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">Total Saldo</p>
+                                        <h3 class="text-3xl font-bold text-blue-400 tracking-tight drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]" id="rek-bank-saldo">Rp 0</h3>
+                                    </div>
+                                </div>
+                                
+                                <div class="neon-card p-6 flex flex-col min-h-[180px]">
+                                    <div class="flex justify-between items-start mb-auto">
+                                        <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.3)]"><i class="fa-solid fa-wallet"></i></div>
+                                        <span class="text-[10px] font-bold text-emerald-300 bg-emerald-900/30 border border-emerald-500/30 px-3 py-1 rounded-md">Tunai</span>
+                                    </div>
+                                    <div class="mt-4">
+                                        <h4 class="text-lg font-bold text-white mb-2">Laci Tunai</h4>
+                                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">Total Saldo</p>
+                                        <h3 class="text-3xl font-bold text-emerald-400 tracking-tight drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" id="rek-kas-saldo">Rp 0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: ARSIP -->
+                <div id="view-arsip" class="page-view hide fade-in">
+                    <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
+                        <div>
+                            <h2 class="text-3xl font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]">Arsip Dokumen</h2>
+                            <p class="text-gray-400 mt-1">Data cloud tersinkronisasi.</p>
+                        </div>
+                        <button onclick="openModal('modal-upload')" class="w-full md:w-auto bg-cyan-500 hover:bg-cyan-400 text-black px-5 py-3 md:py-2.5 rounded-xl font-bold shadow-[0_0_15px_rgba(6,182,212,0.5)] transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Upload Data
+                        </button>
+                    </div>
+
+                    <div class="neon-card overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[600px]">
+                                <thead>
+                                    <tr class="bg-black/40 text-cyan-500 text-xs uppercase tracking-wider border-b border-cyan-500/30">
+                                        <th class="p-5 font-bold">TANGGAL</th>
+                                        <th class="p-5 font-bold">DESKRIPSI DOKUMEN</th>
+                                        <th class="p-5 font-bold">UKURAN</th>
+                                        <th class="p-5 font-bold text-right">AKSI</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-arsip" class="text-sm divide-y divide-white/10">
+                                    <!-- Rendered via JS -->
+                                </tbody>
+                            </table>
+                            <div id="arsip-empty" class="p-16 flex flex-col items-center justify-center text-gray-600 hide">
+                                <i class="fa-regular fa-folder-closed text-5xl mb-4 drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]"></i>
+                                <p class="text-lg font-medium">Database kosong</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: CRM -->
+                <div id="view-crm" class="page-view hide fade-in">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]">Jaringan Pelanggan</h2>
+                        <p class="text-gray-400">Data otomatis terindeks dari pesanan masuk.</p>
+                    </div>
+
+                    <div class="neon-card overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[600px]">
+                                <thead>
+                                    <tr class="bg-black/40 text-fuchsia-500 text-xs uppercase tracking-wider border-b border-fuchsia-500/30">
+                                        <th class="p-4 font-semibold">Koneksi Klien</th>
+                                        <th class="p-4 font-semibold text-center">Frekuensi Order</th>
+                                        <th class="p-4 font-semibold text-right">Total Transmisi (Value)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-crm" class="text-sm divide-y divide-white/10">
+                                    <!-- Rendered via JS -->
+                                </tbody>
+                            </table>
+                            <div id="crm-empty" class="p-16 flex flex-col items-center justify-center text-gray-600 hide">
+                                <i class="fa-solid fa-users-slash text-5xl mb-4 drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]"></i>
+                                <p class="text-lg font-medium">Belum ada data pelanggan</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: SETTINGS -->
+                <div id="view-settings" class="page-view hide fade-in">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]">Konfigurasi Sistem</h2>
+                        <p class="text-gray-400 mt-1">Modifikasi parameter environment.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-24">
+                        <div class="neon-card p-6 md:p-8 h-fit">
+                            <h3 class="text-lg font-bold mb-6 flex items-center gap-2 text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]"><i class="fa-regular fa-building text-cyan-400"></i> Identitas Node</h3>
+                            <form onsubmit="saveSettings(event)" class="space-y-5">
+                                <div>
+                                    <label class="block text-xs font-bold text-cyan-300 uppercase tracking-widest mb-2">Nama Brand Aplikasi</label>
+                                    <input type="text" id="set-appname" class="input-neon" required placeholder="Palugada">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-cyan-300 uppercase tracking-widest mb-2">Nama Entitas Lengkap</label>
+                                    <input type="text" id="set-company" class="input-neon" required placeholder="Percetakan Palugada">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-cyan-300 uppercase tracking-widest mb-2">Kanal Komunikasi WA</label>
+                                    <input type="text" id="set-wa" class="input-neon" required placeholder="08123456789">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-cyan-300 uppercase tracking-widest mb-2">Upload Logo Perusahaan</label>
+                                    <div class="flex items-center gap-3">
+                                        <img id="preview-logo" src="https://cdn-icons-png.flaticon.com/512/2942/2942821.png" class="w-12 h-12 rounded-xl border border-white/20 object-contain bg-white/10 shrink-0 backdrop-blur">
+                                        <input type="file" id="set-logo-file" accept="image/*" class="w-full input-neon file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-cyan-500/20 file:text-cyan-400 hover:file:bg-cyan-500/40 file:transition cursor-pointer" onchange="handleLogoPreview(event)">
+                                    </div>
+                                    <input type="hidden" id="set-logo-base64">
+                                </div>
+                                <div class="pt-4 mt-4 border-t border-white/10">
+                                    <button type="submit" class="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 rounded-xl transition shadow-[0_0_15px_rgba(6,182,212,0.5)]">
+                                        Simpan Konfigurasi
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="neon-card p-6 md:p-8 h-fit">
+                            <h3 class="text-lg font-bold mb-6 flex items-center gap-2 text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]"><i class="fa-solid fa-user-shield text-fuchsia-400"></i> Otoritas Akses</h3>
+                            <div class="bg-black/30 border border-white/10 rounded-xl p-5 mb-4">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 rounded-full bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center font-bold text-xl border border-fuchsia-500/30" id="settings-user-initial">A</div>
+                                    <div>
+                                        <p class="font-bold text-white text-lg" id="settings-user-name">Admin</p>
+                                        <p class="text-sm text-fuchsia-400 font-medium" id="settings-user-email">admin@palugada.com</p>
+                                        <span class="inline-block mt-2 text-[10px] bg-white/10 border border-white/20 px-2 py-1 rounded text-gray-300 uppercase tracking-widest" id="settings-user-role">Administrator</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="doLogout()" class="w-full bg-rose-500/20 border border-rose-500/50 hover:bg-rose-500/40 text-rose-400 font-bold py-3 rounded-xl transition shadow-[0_0_15px_rgba(244,63,94,0.2)]">
+                                Akhiri Sesi (Logout)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL: ORDER BARU -->
+    <div id="modal-order" class="fixed inset-0 z-[9999] flex justify-center items-center hide fade-in modal-backdrop">
+        <div class="neon-card w-full max-w-lg mx-4 flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-black/20 rounded-t-2xl">
+                <h3 class="font-bold text-xl text-white">Buat Pesanan Baru</h3>
+                <button onclick="closeModal('modal-order')" class="text-gray-400 hover:text-white transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <form id="form-order" onsubmit="saveOrder(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-cyan-300 uppercase tracking-widest mb-1 ml-1">Nama Pelanggan</label>
+                        <input type="text" id="order-customer" class="input-neon" required placeholder="Contoh: Budi Santoso">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-cyan-300 uppercase tracking-widest mb-1 ml-1">Nama Produk / Jasa</label>
+                        <input type="text" id="order-product" class="input-neon" required placeholder="Contoh: Cetak Spanduk 3x1">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-cyan-300 uppercase tracking-widest mb-1 ml-1">Harga Total (Rp)</label>
+                        <input type="number" id="order-price" class="input-neon" required min="0" placeholder="50000">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-cyan-300 uppercase tracking-widest mb-1 ml-1">Status Pesanan</label>
+                        <select id="order-status" class="input-neon" required>
+                            <option value="baru">Baru (Menunggu)</option>
+                            <option value="proses">Sedang Diproses</option>
+                            <option value="selesai">Selesai & Lunas</option>
+                        </select>
+                    </div>
+                    <div class="pt-4">
+                        <button type="submit" class="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 rounded-xl transition shadow-[0_0_15px_rgba(6,182,212,0.5)]">Simpan Pesanan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: TRANSAKSI KEUANGAN -->
+    <div id="modal-finance" class="fixed inset-0 z-[9999] flex justify-center items-center hide fade-in modal-backdrop">
+        <div class="neon-card w-full max-w-lg mx-4 flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-black/20 rounded-t-2xl">
+                <h3 class="font-bold text-xl text-white">Catat Transaksi Keuangan</h3>
+                <button onclick="closeModal('modal-finance')" class="text-gray-400 hover:text-white transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <form id="form-finance" onsubmit="saveFinance(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-cyan-300 uppercase tracking-widest mb-1 ml-1">Jenis Transaksi</label>
+                        <select id="fin-type" class="input-neon" required>
+                            <option value="in">Pemasukan (Uang Masuk)</option>
+                            <option value="out">Pengeluaran (Uang Keluar)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-cyan-300 uppercase tracking-widest mb-1 ml-1">Sumber Dana / Rekening</label>
+                        <select id="fin-account" class="input-neon" required>
+                            <option value="bank">Transfer Bank</option>
+                            <option value="kas">Kas Tunai / Laci</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-cyan-300 uppercase tracking-widest mb-1 ml-1">Deskripsi Keterangan</label>
+                        <input type="text" id="fin-desc" class="input-neon" required placeholder="Contoh: Beli Tinta Printer">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-cyan-300 uppercase tracking-widest mb-1 ml-1">Nominal (Rp)</label>
+                        <input type="number" id="fin-amount" class="input-neon" required min="1" placeholder="150000">
+                    </div>
+                    <div class="pt-4">
+                        <button type="submit" class="w-full bg-fuchsia-500 hover:bg-fuchsia-400 text-black font-bold py-3 rounded-xl transition shadow-[0_0_15px_rgba(217,70,239,0.5)]">Simpan Transaksi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: UPLOAD ARSIP -->
+    <div id="modal-upload" class="fixed inset-0 z-[9999] flex justify-center items-center hide fade-in modal-backdrop">
+        <div class="neon-card w-full max-w-lg mx-4 flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-black/20 rounded-t-2xl">
+                <h3 class="font-bold text-xl text-white">Upload Dokumen Baru</h3>
+                <button onclick="closeModal('modal-upload')" class="text-gray-400 hover:text-white transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <form id="form-upload" onsubmit="saveArchive(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-cyan-300 uppercase tracking-widest mb-1 ml-1">Deskripsi / Nama Dokumen</label>
+                        <input type="text" id="arc-desc" class="input-neon" required placeholder="Contoh: Desain Banner 2024">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-cyan-300 uppercase tracking-widest mb-1 ml-1">Pilih File</label>
+                        <input type="file" id="arc-file" class="input-neon bg-black/20" required>
+                        <p class="text-[10px] text-gray-500 mt-1 ml-1">*Simulasi upload (File tidak benar-benar dikirim ke server)</p>
+                    </div>
+                    <div class="pt-4">
+                        <button type="submit" class="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 rounded-xl transition shadow-[0_0_15px_rgba(6,182,212,0.5)]">Upload ke Cloud</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA STATE & MOCK DB (localStorage) ---
+        let db = {
+            users: [],
+            orders: [],
+            finance: [],
+            archive: [],
+            settings: { 
+                appName: 'Palugada', 
+                company: 'Percetakan Palugada', 
+                wa: '08123456789', 
+                logo: 'https://cdn-icons-png.flaticon.com/512/2942/2942821.png' 
+            }
+        };
+        let currentUser = null;
+        let chartInstance = null;
+
+        // Init App
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDB();
+            checkAuth();
+            applySettings();
+        });
+
+        function loadDB() {
+            const stored = localStorage.getItem('palugadaDB');
+            if (stored) {
+                db = JSON.parse(stored);
+            } else {
+                // Seeding initial data for aesthetics
+                db.users.push({ name: 'Admin Utama', email: 'admin@palugada.com', pass: '123', role: 'Admin' });
+                saveDB();
+            }
+        }
+
+        function saveDB() {
+            localStorage.setItem('palugadaDB', JSON.stringify(db));
+        }
+
+        // --- UTILS ---
+        const formatRupiah = (number) => {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+        };
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+        const formatDate = (dateString) => {
+            const d = new Date(dateString);
+            return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        };
+
+        // --- AUTH LOGIC ---
+        function showLoading(callback) {
+            document.getElementById('loadingOverlay').classList.remove('hide');
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').classList.add('hide');
+                callback();
+            }, 800);
+        }
+
+        function showLogin() {
+            document.getElementById('view-register').classList.add('hide');
+            document.getElementById('view-login').classList.remove('hide');
+        }
+
+        function showRegister() {
+            document.getElementById('view-login').classList.add('hide');
+            document.getElementById('view-register').classList.remove('hide');
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value;
+            const wa = document.getElementById('reg-wa').value;
+            const role = document.getElementById('reg-role').value;
+            const email = document.getElementById('reg-email').value;
+            const pass = document.getElementById('reg-pass').value;
+
+            if(db.users.find(u => u.email === email)) {
+                Swal.fire('Gagal', 'Email sudah terdaftar!', 'error');
+                return;
+            }
+
+            db.users.push({ name, wa, role, email, pass });
+            saveDB();
+            
+            showLoading(() => {
+                Swal.fire('Berhasil', 'Akun berhasil dibuat. Silakan login.', 'success');
+                showLogin();
+                document.getElementById('form-register').reset();
+            });
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-pass').value;
+
+            const user = db.users.find(u => u.email === email && u.pass === pass);
+            
+            if (user) {
+                currentUser = user;
+                sessionStorage.setItem('palugadaUser', JSON.stringify(user));
+                showLoading(() => {
+                    document.getElementById('view-login').classList.add('hide');
+                    document.getElementById('main-app').classList.remove('hide');
+                    updateUserUI();
+                    navigate('dashboard');
+                });
+            } else {
+                Swal.fire('Gagal', 'Email atau password salah!', 'error');
+            }
+        }
+
+        function checkAuth() {
+            const storedUser = sessionStorage.getItem('palugadaUser');
+            if (storedUser) {
+                currentUser = JSON.parse(storedUser);
+                document.getElementById('view-login').classList.add('hide');
+                document.getElementById('main-app').classList.remove('hide');
+                updateUserUI();
+                navigate('dashboard');
+            } else {
+                showLogin();
+            }
+        }
+
+        function doLogout() {
+            Swal.fire({
+                title: 'Akhiri Sesi?',
+                text: "Anda akan keluar dari sistem.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#f43f5e',
+                cancelButtonColor: '#334155',
+                confirmButtonText: 'Ya, Logout'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    sessionStorage.removeItem('palugadaUser');
+                    currentUser = null;
+                    document.getElementById('main-app').classList.add('hide');
+                    showLogin();
+                    document.getElementById('form-login').reset();
+                }
+            });
+        }
+
+        function updateUserUI() {
+            if(!currentUser) return;
+            const initials = currentUser.name.charAt(0).toUpperCase();
+            
+            document.getElementById('user-initial').innerText = initials;
+            document.getElementById('user-name').innerText = currentUser.name;
+            document.getElementById('user-role').innerText = currentUser.role;
+
+            document.getElementById('settings-user-initial').innerText = initials;
+            document.getElementById('settings-user-name').innerText = currentUser.name;
+            document.getElementById('settings-user-email').innerText = currentUser.email;
+            document.getElementById('settings-user-role').innerText = currentUser.role;
+            
+            document.getElementById('greet-text').innerText = `Selamat datang, ${currentUser.name.split(' ')[0]}`;
+        }
+
+        // --- NAVIGATION ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('app-sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                backdrop.classList.remove('hide');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                backdrop.classList.add('hide');
+            }
+        }
+
+        function navigate(viewId) {
+            // Hide all views
+            document.querySelectorAll('.page-view').forEach(el => el.classList.add('hide'));
+            // Remove active class from navs
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.classList.remove('active-nav', 'bg-white/10', 'text-white');
+                el.classList.add('text-gray-400');
+            });
+            
+            // Show target
+            document.getElementById(`view-${viewId}`).classList.remove('hide');
+            
+            // Set active nav
+            const activeNav = document.getElementById(`nav-${viewId}`);
+            if(activeNav) {
+                activeNav.classList.add('active-nav', 'bg-white/10', 'text-white');
+                activeNav.classList.remove('text-gray-400');
+            }
+
+            // Close mobile sidebar if open
+            if(window.innerWidth < 768) {
+                document.getElementById('app-sidebar').classList.add('-translate-x-full');
+                document.getElementById('sidebar-backdrop').classList.add('hide');
+            }
+
+            // Render specific data
+            if(viewId === 'dashboard') renderDashboard();
+            if(viewId === 'orders') renderOrders();
+            if(viewId === 'finance') renderFinance();
+            if(viewId === 'arsip') renderArchive();
+            if(viewId === 'crm') renderCRM();
+            if(viewId === 'settings') loadSettingsToForm();
+        }
+
+        // --- MODAL UTILS ---
+        function openModal(id) { document.getElementById(id).classList.remove('hide'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hide'); }
+
+        // --- DASHBOARD LOGIC ---
+        function renderDashboard() {
+            // Stats
+            const totalPendapatan = db.finance.filter(f => f.type === 'in').reduce((sum, f) => sum + parseInt(f.amount), 0);
+            document.getElementById('dash-pendapatan').innerText = formatRupiah(totalPendapatan);
+            document.getElementById('dash-pesanan').innerText = db.orders.length;
+
+            const cSemua = db.orders.length;
+            const cBaru = db.orders.filter(o => o.status === 'baru').length;
+            const cProses = db.orders.filter(o => o.status === 'proses').length;
+            const cSelesai = db.orders.filter(o => o.status === 'selesai').length;
+
+            document.getElementById('stat-semua').innerText = cSemua;
+            document.getElementById('stat-baru').innerText = cBaru;
+            document.getElementById('stat-proses').innerText = cProses;
+            document.getElementById('stat-selesai').innerText = cSelesai;
+
+            initChart();
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            
+            if(chartInstance) {
+                chartInstance.destroy();
+            }
+
+            // Mock Data for Chart based on last 7 entries of finance 'in'
+            let labels = [];
+            let dataPoints = [];
+            
+            const incomings = db.finance.filter(f => f.type === 'in').slice(-7);
+            if(incomings.length === 0) {
+                labels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+                dataPoints = [0, 0, 0, 0, 0, 0, 0];
+            } else {
+                incomings.forEach((f, i) => {
+                    labels.push(`Trx ${i+1}`);
+                    dataPoints.push(f.amount);
+                });
+            }
+
+            let gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(6, 182, 212, 0.5)'); // Cyan
+            gradient.addColorStop(1, 'rgba(6, 182, 212, 0.0)');
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Pendapatan',
+                        data: dataPoints,
+                        borderColor: '#06b6d4',
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#06b6d4',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // --- ORDERS LOGIC ---
+        function renderOrders() {
+            const grid = document.getElementById('grid-orders');
+            const empty = document.getElementById('orders-empty');
+            grid.innerHTML = '';
+            
+            if(db.orders.length === 0) {
+                empty.classList.remove('hide');
+            } else {
+                empty.classList.add('hide');
+                // Sort by date desc
+                const sorted = [...db.orders].reverse();
+                sorted.forEach(order => {
+                    let statusColor, statusBg, statusIcon;
+                    if(order.status === 'baru') { statusColor = 'text-cyan-400'; statusBg = 'bg-cyan-500/20'; statusIcon = 'fa-file-invoice'; }
+                    else if(order.status === 'proses') { statusColor = 'text-amber-400'; statusBg = 'bg-amber-500/20'; statusIcon = 'fa-gears'; }
+                    else { statusColor = 'text-emerald-400'; statusBg = 'bg-emerald-500/20'; statusIcon = 'fa-check-double'; }
+
+                    const card = `
+                        <div class="neon-card p-5 relative overflow-hidden group">
+                            <div class="absolute -right-6 -top-6 w-24 h-24 ${statusBg} blur-[30px] rounded-full pointer-events-none transition group-hover:blur-[40px]"></div>
+                            <div class="flex justify-between items-start mb-4 relative z-10">
+                                <div>
+                                    <h4 class="font-bold text-lg text-white mb-1 truncate max-w-[180px]" title="${order.customer}">${order.customer}</h4>
+                                    <p class="text-xs text-gray-400">${formatDate(order.date)}</p>
+                                </div>
+                                <div class="w-10 h-10 rounded-xl ${statusBg} ${statusColor} border border-white/5 flex items-center justify-center shadow-lg"><i class="fa-solid ${statusIcon}"></i></div>
+                            </div>
+                            <div class="mb-4 relative z-10">
+                                <p class="text-sm text-gray-300 font-medium truncate">${order.product}</p>
+                                <h3 class="font-bold text-xl text-white mt-2">${formatRupiah(order.price)}</h3>
+                            </div>
+                            <div class="flex justify-between items-center pt-4 border-t border-white/10 relative z-10">
+                                <select onchange="updateOrderStatus('${order.id}', this.value)" class="bg-black/40 border border-white/10 text-xs text-white rounded-lg px-2 py-1.5 outline-none focus:border-cyan-500">
+                                    <option value="baru" ${order.status === 'baru' ? 'selected' : ''}>Baru</option>
+                                    <option value="proses" ${order.status === 'proses' ? 'selected' : ''}>Proses</option>
+                                    <option value="selesai" ${order.status === 'selesai' ? 'selected' : ''}>Selesai</option>
+                                </select>
+                                <button onclick="deleteOrder('${order.id}')" class="text-gray-500 hover:text-rose-400 transition"><i class="fa-solid fa-trash-can"></i></button>
+                            </div>
+                        </div>
+                    `;
+                    grid.insertAdjacentHTML('beforeend', card);
+                });
+            }
+        }
+
+        function saveOrder(e) {
+            e.preventDefault();
+            const customer = document.getElementById('order-customer').value;
+            const product = document.getElementById('order-product').value;
+            const price = document.getElementById('order-price').value;
+            const status = document.getElementById('order-status').value;
+
+            db.orders.push({
+                id: generateId(),
+                date: new Date().toISOString(),
+                customer, product, price, status
+            });
+            saveDB();
+            
+            // Auto add to finance if selesai? Let's keep them separate for manual control, or auto add. 
+            // Let's NOT auto-add to keep it simple, user logs finance manually.
+
+            closeModal('modal-order');
+            document.getElementById('form-order').reset();
+            renderOrders();
+            Swal.fire({ title: 'Berhasil', text: 'Pesanan ditambahkan', icon: 'success', timer: 1500, showConfirmButton: false });
+        }
+
+        function updateOrderStatus(id, newStatus) {
+            const order = db.orders.find(o => o.id === id);
+            if(order) {
+                order.status = newStatus;
+                saveDB();
+            }
+        }
+
+        function deleteOrder(id) {
+            Swal.fire({
+                title: 'Hapus Pesanan?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#f43f5e', text: 'Data tidak bisa dikembalikan.'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    db.orders = db.orders.filter(o => o.id !== id);
+                    saveDB();
+                    renderOrders();
+                }
+            });
+        }
+
+        // --- FINANCE LOGIC ---
+        function switchFinanceTab(tabId) {
+            ['ringkasan', 'bukukas', 'rekening'].forEach(t => {
+                document.getElementById(`fin-tab-${t}`).classList.add('hide');
+                const btn = document.getElementById(`tab-${t}`);
+                if(t === tabId) {
+                    btn.className = 'px-6 py-2 rounded-full bg-cyan-500 text-black font-bold text-sm transition shadow-[0_0_10px_rgba(6,182,212,0.5)]';
+                } else {
+                    btn.className = 'px-6 py-2 rounded-full text-gray-400 font-medium text-sm hover:text-white transition hover:bg-white/5';
+                }
+            });
+            document.getElementById(`fin-tab-${tabId}`).classList.remove('hide');
+        }
+
+        function renderFinance() {
+            let totIn = 0, totOut = 0;
+            let bankBal = 0, kasBal = 0;
+
+            db.finance.forEach(f => {
+                const amt = parseInt(f.amount);
+                if(f.type === 'in') {
+                    totIn += amt;
+                    if(f.account === 'bank') bankBal += amt; else kasBal += amt;
+                } else {
+                    totOut += amt;
+                    if(f.account === 'bank') bankBal -= amt; else kasBal -= amt;
+                }
+            });
+
+            const aset = bankBal + kasBal;
+            const laba = totIn - totOut;
+
+            // Summary Tab
+            document.getElementById('fin-tot-aset').innerText = formatRupiah(aset);
+            document.getElementById('fin-tot-laba').innerText = formatRupiah(laba);
+            document.getElementById('fin-det-bank').innerText = formatRupiah(bankBal);
+            document.getElementById('fin-det-kas').innerText = formatRupiah(kasBal);
+
+            // Accounts Tab
+            document.getElementById('rek-bank-saldo').innerText = formatRupiah(bankBal);
+            document.getElementById('rek-kas-saldo').innerText = formatRupiah(kasBal);
+
+            // Cashbook Tab
+            const listContainer = document.getElementById('fin-list-container');
+            const empty = document.getElementById('finance-empty');
+            listContainer.innerHTML = '';
+            
+            if(db.finance.length === 0) {
+                empty.classList.remove('hide');
+            } else {
+                empty.classList.add('hide');
+                const sorted = [...db.finance].reverse();
+                sorted.forEach(f => {
+                    const isMasuk = f.type === 'in';
+                    const iconColor = isMasuk ? 'text-emerald-400 bg-emerald-500/20' : 'text-rose-400 bg-rose-500/20';
+                    const iconSign = isMasuk ? 'fa-arrow-down' : 'fa-arrow-up';
+                    const textSign = isMasuk ? '+' : '-';
+                    const textColor = isMasuk ? 'text-emerald-400' : 'text-rose-400';
+                    
+                    const row = `
+                        <div class="flex items-center justify-between p-4 bg-black/30 rounded-xl border border-white/5 hover:border-white/10 transition">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-full ${iconColor} flex items-center justify-center shrink-0">
+                                    <i class="fa-solid ${iconSign}"></i>
+                                </div>
+                                <div>
+                                    <p class="text-white font-bold text-sm">${f.desc}</p>
+                                    <p class="text-[10px] text-gray-400 mt-0.5">${formatDate(f.date)} &bull; ${f.account.toUpperCase()}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold ${textColor}">${textSign} ${formatRupiah(f.amount)}</p>
+                                <button onclick="deleteFinance('${f.id}')" class="text-gray-600 hover:text-rose-500 text-xs mt-1 transition"><i class="fa-solid fa-trash"></i> Hapus</button>
+                            </div>
+                        </div>
+                    `;
+                    listContainer.insertAdjacentHTML('beforeend', row);
+                });
+            }
+        }
+
+        function saveFinance(e) {
+            e.preventDefault();
+            db.finance.push({
+                id: generateId(),
+                date: new Date().toISOString(),
+                type: document.getElementById('fin-type').value,
+                account: document.getElementById('fin-account').value,
+                desc: document.getElementById('fin-desc').value,
+                amount: document.getElementById('fin-amount').value
+            });
+            saveDB();
+            closeModal('modal-finance');
+            document.getElementById('form-finance').reset();
+            renderFinance();
+            Swal.fire({ title: 'Tersimpan', icon: 'success', timer: 1000, showConfirmButton: false });
+        }
+
+        function deleteFinance(id) {
+            Swal.fire({ title: 'Hapus Transaksi?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#f43f5e' })
+            .then(res => {
+                if(res.isConfirmed) {
+                    db.finance = db.finance.filter(f => f.id !== id);
+                    saveDB();
+                    renderFinance();
+                }
+            });
+        }
+
+        // --- ARCHIVE LOGIC ---
+        function renderArchive() {
+            const tbody = document.getElementById('table-arsip');
+            const empty = document.getElementById('arsip-empty');
+            tbody.innerHTML = '';
+            
+            if(db.archive.length === 0) {
+                empty.classList.remove('hide');
+            } else {
+                empty.classList.add('hide');
+                db.archive.forEach(arc => {
+                    const tr = `
+                        <tr class="hover:bg-white/5 transition">
+                            <td class="p-5 text-gray-300">${formatDate(arc.date)}</td>
+                            <td class="p-5 font-medium text-white flex items-center gap-3">
+                                <i class="fa-solid fa-file-pdf text-rose-400 text-lg"></i>
+                                ${arc.desc}
+                            </td>
+                            <td class="p-5 text-gray-400">${arc.size}</td>
+                            <td class="p-5 text-right">
+                                <button class="text-cyan-400 hover:text-cyan-300 mr-3 px-2 py-1 rounded bg-cyan-500/10 transition" onclick="Swal.fire('Info', 'Simulasi download', 'info')"><i class="fa-solid fa-download"></i></button>
+                                <button class="text-rose-400 hover:text-rose-300 px-2 py-1 rounded bg-rose-500/10 transition" onclick="deleteArchive('${arc.id}')"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.insertAdjacentHTML('beforeend', tr);
+                });
+            }
+        }
+
+        function saveArchive(e) {
+            e.preventDefault();
+            const desc = document.getElementById('arc-desc').value;
+            const fileInput = document.getElementById('arc-file');
+            
+            if(!fileInput.files.length) return;
+
+            const sizeMb = (fileInput.files[0].size / (1024*1024)).toFixed(2) + ' MB';
+
+            db.archive.push({
+                id: generateId(),
+                date: new Date().toISOString(),
+                desc: desc,
+                size: sizeMb
+            });
+            saveDB();
+            closeModal('modal-upload');
+            document.getElementById('form-upload').reset();
+            renderArchive();
+            Swal.fire('Berhasil', 'Dokumen tersimpan ke Arsip', 'success');
+        }
+
+        function deleteArchive(id) {
+            db.archive = db.archive.filter(a => a.id !== id);
+            saveDB();
+            renderArchive();
+        }
+
+        // --- CRM LOGIC ---
+        function renderCRM() {
+            const tbody = document.getElementById('table-crm');
+            const empty = document.getElementById('crm-empty');
+            tbody.innerHTML = '';
+
+            // Aggregate orders by customer
+            let clients = {};
+            db.orders.forEach(o => {
+                if(!clients[o.customer]) clients[o.customer] = { count: 0, value: 0 };
+                clients[o.customer].count += 1;
+                clients[o.customer].value += parseInt(o.price);
+            });
+
+            const clientNames = Object.keys(clients);
+            
+            if(clientNames.length === 0) {
+                empty.classList.remove('hide');
+            } else {
+                empty.classList.add('hide');
+                
+                // Sort by value desc
+                clientNames.sort((a,b) => clients[b].value - clients[a].value).forEach(name => {
+                    const c = clients[name];
+                    const tr = `
+                        <tr class="hover:bg-white/5 transition">
+                            <td class="p-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-fuchsia-500 to-cyan-500 flex items-center justify-center text-xs font-bold text-white uppercase">${name.substring(0,2)}</div>
+                                    <span class="font-bold text-white">${name}</span>
+                                </div>
+                            </td>
+                            <td class="p-4 text-center">
+                                <span class="bg-white/10 px-3 py-1 rounded-full text-cyan-300 text-xs font-bold border border-white/10">${c.count} trx</span>
+                            </td>
+                            <td class="p-4 text-right font-bold text-emerald-400">
+                                ${formatRupiah(c.value)}
+                            </td>
+                        </tr>
+                    `;
+                    tbody.insertAdjacentHTML('beforeend', tr);
+                });
+            }
+        }
+
+        // --- SETTINGS LOGIC ---
+        function loadSettingsToForm() {
+            document.getElementById('set-appname').value = db.settings.appName;
+            document.getElementById('set-company').value = db.settings.company;
+            document.getElementById('set-wa').value = db.settings.wa;
+            
+            if(db.settings.logo) {
+                document.getElementById('preview-logo').src = db.settings.logo;
+                document.getElementById('set-logo-base64').value = db.settings.logo;
+            }
+        }
+
+        function handleLogoPreview(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    document.getElementById('preview-logo').src = evt.target.result;
+                    document.getElementById('set-logo-base64').value = evt.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function saveSettings(e) {
+            e.preventDefault();
+            db.settings.appName = document.getElementById('set-appname').value;
+            db.settings.company = document.getElementById('set-company').value;
+            db.settings.wa = document.getElementById('set-wa').value;
+            db.settings.logo = document.getElementById('set-logo-base64').value;
+            
+            saveDB();
+            applySettings();
+            
+            Swal.fire({ title: 'Disimpan', text: 'Konfigurasi sistem diperbarui', icon: 'success', timer: 1500 });
+        }
+
+        function applySettings() {
+            // Apply App Name
+            document.title = `${db.settings.appName} ERP - Neon Glass`;
+            const appNames = document.querySelectorAll('#sidebar-appname, #mobile-header-appname');
+            appNames.forEach(el => el.innerText = db.settings.appName);
+
+            // Apply Logo
+            if(db.settings.logo) {
+                const logos = document.querySelectorAll('#sidebar-logo, #mobile-header-logo, #login-logo, #reg-logo');
+                logos.forEach(el => el.src = db.settings.logo);
+            }
+        }
+
+    </script>
+</body>
+</html>
