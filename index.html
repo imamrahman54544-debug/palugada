@@ -707,26 +707,119 @@
         let currentUser = null;
         let chartInstance = null;
 
+        // --- CLOUD DATABASE (FIREBASE) ---
+        let firestoreDocRef = null;
+        let fbUser = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'palugada-erp-prod';
+
         // Init App
         document.addEventListener('DOMContentLoaded', () => {
-            loadDB();
-            checkAuth();
-            applySettings();
+            initCloudDatabase();
         });
 
-        function loadDB() {
-            const stored = localStorage.getItem('palugadaDB');
-            if (stored) {
-                db = JSON.parse(stored);
-            } else {
-                // Seeding initial data for aesthetics
-                db.users.push({ name: 'Admin Utama', email: 'admin@palugada.com', pass: '123', role: 'Admin' });
-                saveDB();
+        async function initCloudDatabase() {
+            showLoading(() => {}); 
+            document.getElementById('loading-text').innerText = 'Menyambungkan ke Cloud...';
+
+            try {
+                const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+                const { getAuth, signInAnonymously, signInWithCustomToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+                const { getFirestore, doc, setDoc, onSnapshot } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+                // ========================================================================
+                // PENTING UNTUK VERCEL: 
+                // Ganti isi 'firebaseConfigVercel' di bawah ini dengan config Firebase milikmu.
+                // ========================================================================
+                const firebaseConfigVercel = {
+                    apiKey: "AIzaSyB-B53hZTMpp_r606-Z_nu5HUM_lTb3FZg",
+                    authDomain: "palugada-erp.firebaseapp.com",
+                    projectId: "palugada-erp",
+                    storageBucket: "palugada-erp.firebasestorage.app",
+                    messagingSenderId: "636947396874",
+                    appId: "1:636947396874:web:7c9de3b2e9c7b2b35222f3"
+                };
+
+                // Deteksi lingkungan
+                let activeConfig = firebaseConfigVercel;
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    activeConfig = JSON.parse(__firebase_config);
+                }
+
+                const app = initializeApp(activeConfig);
+                const auth = getAuth(app);
+                const dbCloud = getFirestore(app);
+
+                // Autentikasi Cloud
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                fbUser = auth.currentUser;
+                if (!fbUser) return;
+
+                // Path Storage Real-time
+                firestoreDocRef = doc(dbCloud, 'artifacts', appId, 'public', 'data', 'palugada_db');
+
+                // Sinkronisasi Real-time
+                onSnapshot(firestoreDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        db = docSnap.data().dbData;
+                        // Update UI otomatis jika ada data baru masuk
+                        if(currentUser && !document.getElementById('main-app').classList.contains('hide')) {
+                            updateUserUI();
+                            renderDashboard();
+                            renderOrders();
+                            renderFinance();
+                            renderArchive();
+                            renderCRM();
+                        }
+                    } else {
+                        if(db.users.length === 0) {
+                            db.users.push({ name: 'Admin Utama', email: 'admin@palugada.com', pass: '123', role: 'Admin' });
+                            saveDB();
+                        }
+                    }
+
+                    document.getElementById('loadingOverlay').classList.add('hide');
+                    checkAuth();
+                    applySettings();
+                }, (error) => {
+                    console.error("Gagal sinkron Cloud:", error);
+                    document.getElementById('loadingOverlay').classList.add('hide');
+                    loadLocalDBFallback();
+                });
+
+            } catch(e) {
+                console.warn("Menjalankan Local Mode (Cloud belum diatur):", e);
+                document.getElementById('loadingOverlay').classList.add('hide');
+                loadLocalDBFallback();
             }
         }
 
+        function loadLocalDBFallback() {
+            const stored = localStorage.getItem('palugadaDB');
+            if (stored) {
+                db = JSON.parse(stored);
+            } else if(db.users.length === 0) {
+                db.users.push({ name: 'Admin Utama', email: 'admin@palugada.com', pass: '123', role: 'Admin' });
+                saveDB();
+            }
+            checkAuth();
+            applySettings();
+        }
+
         function saveDB() {
+            // Backup ke localStorage
             localStorage.setItem('palugadaDB', JSON.stringify(db));
+
+            // Simpan ke Cloud secara otomatis
+            if(fbUser && firestoreDocRef) {
+                import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js").then(({setDoc}) => {
+                    setDoc(firestoreDocRef, { dbData: db }).catch(e => console.error("Gagal simpan ke cloud", e));
+                });
+            }
         }
 
         // --- UTILS ---
