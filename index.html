@@ -759,8 +759,10 @@
                 fbUser = auth.currentUser;
                 if (!fbUser) return;
 
-                // Path Storage Real-time
-                firestoreDocRef = doc(dbCloud, 'artifacts', appId, 'public', 'data', 'palugada_db');
+                // Path Storage Real-time (Diperbaiki agar terbaca oleh Cloud Firebase)
+                firestoreDocRef = doc(dbCloud, 'artifacts', appId, 'public', 'data', 'palugada_db', 'main_doc');
+
+                let isFirstLoad = true;
 
                 // Sinkronisasi Real-time
                 onSnapshot(firestoreDocRef, (docSnap) => {
@@ -785,6 +787,20 @@
                     document.getElementById('loadingOverlay').classList.add('hide');
                     checkAuth();
                     applySettings();
+
+                    // Notifikasi sukses agar kita tahu Cloud aktif
+                    if (isFirstLoad) {
+                        Swal.fire({
+                            title: 'Tersambung ke Cloud! ☁️',
+                            icon: 'success',
+                            toast: true,
+                            position: 'top-end',
+                            timer: 3000,
+                            showConfirmButton: false,
+                            background: '#0f172a', color: '#fff'
+                        });
+                        isFirstLoad = false;
+                    }
                 }, (error) => {
                     console.error("Gagal sinkron Cloud:", error);
                     document.getElementById('loadingOverlay').classList.add('hide');
