@@ -1726,6 +1726,26 @@
             Swal.fire({ title: 'Diperbarui', icon: 'success', timer: 1500, showConfirmButton: false });
         }
 
+        function deleteOrder(id) {
+            Swal.fire({ 
+                title: 'Hapus Pesanan?', 
+                text: 'Data transaksi ini akan dihapus permanen.', 
+                icon: 'warning', 
+                showCancelButton: true, 
+                confirmButtonColor: '#e11d48', 
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: 'Ya, Hapus!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    db.orders = db.orders.filter(o => o.id !== id);
+                    saveDB();
+                    renderOrders(); // Refresh tabel pesanan
+                    renderDashboard(); // Refresh angka di dashboard
+                    renderCRM(); // Refresh data pelanggan
+                    Swal.fire({ title: 'Terhapus!', icon: 'success', timer: 1500, showConfirmButton: false });
+                }
+            });
+        }
 
         // --- FINANCE LOGIC ---
         function switchFinanceTab(tabId) {
