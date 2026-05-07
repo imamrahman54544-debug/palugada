@@ -20,6 +20,9 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <!-- HTML2PDF.js untuk fitur unduh file PDF asli -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -1163,35 +1166,39 @@
             let labels = [];
             let dataPoints = [];
             
-            const incomings = db.finance.filter(f => f.type === 'in').slice(-7);
-            if(incomings.length === 0) {
-                labels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-                dataPoints = [0, 0, 0, 0, 0, 0, 0];
-            } else {
-                incomings.forEach((f, i) => {
-                    labels.push(`Trx ${i+1}`);
-                    dataPoints.push(f.amount);
-                });
+            // Mengelompokkan pendapatan berdasarkan tanggal transaksi
+            let incomeMap = {};
+            db.finance.filter(f => f.type === 'in').forEach(f => {
+                let dateStr = formatDate(f.date);
+                if(!incomeMap[dateStr]) incomeMap[dateStr] = 0;
+                incomeMap[dateStr] += parseInt(f.amount);
+            });
+
+            // Mengambil 7 tanggal terakhir yang memiliki transaksi
+            labels = Object.keys(incomeMap).slice(-7);
+            dataPoints = labels.map(l => incomeMap[l]);
+
+            if(labels.length === 0) {
+                labels = ['Belum', 'Ada', 'Data', 'Transaksi'];
+                dataPoints = [0, 0, 0, 0];
             }
 
-            let gradient = ctx.createLinearGradient(0, 0, 0, 300);
-            gradient.addColorStop(0, 'rgba(6, 182, 212, 0.4)'); // Cyan Light
-            gradient.addColorStop(1, 'rgba(6, 182, 212, 0.0)');
-
             chartInstance = new Chart(ctx, {
-                type: 'line',
+                type: 'bar', // Mengubah chart dari garis menjadi Batang (Bar)
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Pendapatan', data: dataPoints, borderColor: '#06b6d4', backgroundColor: gradient,
-                        borderWidth: 3, pointBackgroundColor: '#fff', pointBorderColor: '#06b6d4', pointBorderWidth: 2,
-                        pointRadius: 4, fill: true, tension: 0.4
+                        label: 'Pendapatan', 
+                        data: dataPoints, 
+                        backgroundColor: '#06b6d4', // Warna cyan khas tema
+                        borderRadius: 6, // Ujung diagram melengkung
+                        borderWidth: 0
                     }]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
                     scales: {
-                        x: { grid: { color: 'rgba(0, 0, 0, 0.05)' }, ticks: { color: '#64748b' } },
+                        x: { grid: { color: 'rgba(0, 0, 0, 0.05)' }, ticks: { color: '#64748b', font: {size: 10} } },
                         y: { grid: { color: 'rgba(0, 0, 0, 0.05)' }, ticks: { color: '#64748b' }, beginAtZero: true }
                     }
                 }
@@ -1868,13 +1875,164 @@
                     const orderId = parts[0].replace('Invoice ', '').trim();
                     const orderExists = db.orders.find(o => o.id === orderId);
                     if(orderExists) {
-                        printInvoice(orderId);
+                        downloadInvoicePDF(orderId); // Memanggil fungsi download PDF asli
                         return;
                     }
                 }
             }
             Swal.fire({
                 title: 'Mengunduh Dokumen', text: 'File simulasi sedang disiapkan...', icon: 'info', timer: 2000, showConfirmButton: false
+            });
+        }
+
+        // Fungsi Baru: Men-generate dan mengunduh file .pdf langsung ke perangkat
+        function downloadInvoicePDF(orderId) {
+            const order = db.orders.find(o => o.id === orderId);
+            if(!order) return;
+
+            let logo = db.settings.logo || 'https://cdn-icons-png.flaticon.com/512/2942/2942821.png';
+            let company = db.settings.company || 'PERUSAHAAN';
+            let coAddress = db.settings.address || '-';
+            let coEmail = db.settings.email || '-';
+            let coWa = db.settings.wa || '-';
+            let bankInfo = db.settings.bank || '-';
+            let notes = db.settings.notes || 'Pembayaran Lunas';
+            let signee = db.settings.signee || 'Finance Dept';
+            
+            let soNumber = order.id ? order.id.replace('INV', 'SO') : '-';
+            let custAddress = order.customerAddress || '-';
+            let custPhone = order.customerPhone || '-';
+
+            let now = new Date();
+            let dateTop = ("0" + now.getDate()).slice(-2) + "/" + ("0" + (now.getMonth() + 1)).slice(-2) + "/" + String(now.getFullYear()).slice(-2);
+            let timeTop = ("0" + now.getHours()).slice(-2) + "." + ("0" + now.getMinutes()).slice(-2);
+            let dateFormatted = formatDate(order.date);
+
+            let itemsHtml = '';
+            if(order.items && order.items.length > 0) {
+                order.items.forEach(item => {
+                    itemsHtml += `
+                    <tr>
+                        <td style="padding: 8px 5px; font-weight:bold;">${item.name.toUpperCase()}</td>
+                        <td style="padding: 8px 5px; font-weight:bold;">${item.desc.toUpperCase() || '-'}</td>
+                        <td style="padding: 8px 5px; text-align: center; font-weight:bold;">${item.qty}</td>
+                        <td style="padding: 8px 5px; text-align: center; font-weight:bold;">${item.unit}</td>
+                        <td style="padding: 8px 5px; text-align: center; font-weight:bold;">${formatRupiah(item.sell).replace(',00','')}</td>
+                        <td style="padding: 8px 5px; text-align: center; font-weight:bold;">${formatRupiah(item.subtotal).replace(',00','')}</td>
+                    </tr>`;
+                });
+            } else {
+                itemsHtml = `<tr><td colspan="6" style="text-align:center; padding: 10px;">${order.product}</td></tr>`;
+            }
+
+            let dpFormatted = (order.dp === 0 || !order.dp) ? 'Rp. -' : formatRupiah(order.dp).replace(',00', '');
+
+            // Membuat Container Template Invoice (Tersembunyi)
+            let htmlContent = `
+            <div id="pdf-container" style="font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; color: #000; padding: 30px; width: 800px; background: #fff; box-sizing: border-box;">
+                <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 20px;">
+                    <div>${dateTop}, ${timeTop}</div>
+                    <div>Invoice - ${order.id}</div>
+                </div>
+
+                <img src="${logo}" style="max-height: 60px; max-width: 150px; display: block; margin-bottom: 20px; object-fit: contain;" />
+                <div style="font-size: 22px; font-weight: bold; margin-bottom: 30px; letter-spacing: 0.5px;">SALES INVOICE</div>
+
+                <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
+                    <div style="width: 55%; line-height: 1.6;">
+                        <b>To:</b><br>
+                        <b>${order.customer.toUpperCase()}</b><br>
+                        Alamat : ${custAddress}<br>
+                        Telp: ${custPhone}
+                    </div>
+                    <div style="width: 40%;">
+                        <table style="width: 100%; text-align: left; border-collapse: collapse;">
+                            <tr><td style="width: 100px; padding: 3px 0;">Referensi</td><td>${order.id}</td></tr>
+                            <tr><td style="padding: 3px 0;">Tanggal</td><td>${dateFormatted}</td></tr>
+                            <tr><td style="padding: 3px 0;">Pemesanan</td><td>${soNumber}</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+                    <thead>
+                        <tr>
+                            <th style="border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 10px 5px; font-size: 11px; text-align: left;">Produk</th>
+                            <th style="border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 10px 5px; font-size: 11px; text-align: left;">Deskripsi</th>
+                            <th style="border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 10px 5px; font-size: 11px; text-align: center;">Kuantitas</th>
+                            <th style="border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 10px 5px; font-size: 11px; text-align: center;">Satuan</th>
+                            <th style="border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 10px 5px; font-size: 11px; text-align: center;">Harga</th>
+                            <th style="border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 10px 5px; font-size: 11px; text-align: center;">Jumlah</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsHtml}
+                        <tr><td colspan="6" style="border-bottom: 2px solid #000;"></td></tr>
+                    </tbody>
+                </table>
+
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 40px; margin-top: 15px;">
+                    <table style="width: 300px; font-weight: bold; font-size: 11px; border-collapse: collapse;">
+                        <tr><td style="width: 130px; padding: 4px 0;">Subtotal</td><td style="text-align: left;">${formatRupiah(order.total || order.price).replace(',00', '')}</td></tr>
+                        <tr><td style="padding: 4px 0;">Dp</td><td style="text-align: left;">${dpFormatted}</td></tr>
+                        <tr><td style="padding: 4px 0;"><span style="text-decoration: underline;">Total</span></td><td style="text-align: left;"><span style="text-decoration: underline;">${formatRupiah(order.total || order.price).replace(',00', '')}</span></td></tr>
+                    </table>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-bottom: 40px;">
+                    <div style="width: 60%; font-size: 11px; line-height: 1.5;">
+                        <b>Notes:</b><br>
+                        ${notes}<br><br>
+                        <b>Payment Transfer to:</b><br>
+                        ${bankInfo}
+                    </div>
+                    <div style="width: 30%; text-align: right; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; font-size: 11px;">
+                        <div>Best Regards,</div>
+                        <div style="margin-top: 50px;">
+                            <div style="font-weight: bold; text-decoration: underline; color: #000; margin-bottom: 2px;">${signee}</div>
+                            <div>Finance Dept</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="font-size: 10px; line-height: 1.5;">
+                    <b>${company.toUpperCase()}</b><br>
+                    ${coAddress}<br>
+                    Telp: ${coWa}<br>
+                    Email: ${coEmail}
+                </div>
+            </div>`;
+
+            // Proses generate file PDF dengan popup loading
+            Swal.fire({
+                title: 'Mengunduh PDF...', 
+                text: 'Harap tunggu file sedang di-generate.',
+                icon: 'info', 
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading() }
+            });
+
+            // Buat elemen tersembunyi agar tidak merusak tampilan
+            let tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlContent;
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.left = '-9999px';
+            tempDiv.style.top = '-9999px';
+            document.body.appendChild(tempDiv);
+
+            // Parameter html2pdf
+            var opt = {
+                margin:       0,
+                filename:     `Invoice_${order.id}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            // Mengeksekusi Download PDF
+            html2pdf().set(opt).from(tempDiv.firstElementChild).save().then(() => {
+                document.body.removeChild(tempDiv);
+                Swal.fire({title: 'Sukses', text: 'File PDF berhasil diunduh.', icon: 'success', timer: 1500, showConfirmButton: false});
             });
         }
 
