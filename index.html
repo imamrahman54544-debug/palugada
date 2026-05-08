@@ -987,6 +987,9 @@
         };
 
         // --- AUTH LOGIC ---
+        let pendingRegistration = null;
+        let currentOTP = null;
+
         function showLoading(callback) {
             document.getElementById('loadingOverlay').classList.remove('hide');
             setTimeout(() => {
@@ -1018,14 +1021,62 @@
                 return;
             }
 
-            db.users.push({ name, wa, role, email, pass });
-            saveDB();
+            // Simpan data sementara dan buat OTP 6 digit acak
+            currentOTP = Math.floor(100000 + Math.random() * 900000).toString();
+            pendingRegistration = { name, wa, role, email, pass };
+
+            // Kosongkan form input OTP
+            document.querySelectorAll('#otp-inputs input').forEach(inp => inp.value = '');
             
-            showLoading(() => {
-                Swal.fire({icon:'success', title:'Berhasil', text:'Akun berhasil dibuat. Silakan login.'});
-                showLogin();
-                document.getElementById('form-register').reset();
+            // Tampilkan Modal OTP
+            openModal('modal-otp');
+
+            // --- SIMULASI PENGIRIMAN EMAIL ---
+            // (Nanti diganti script EmailJS agar masuk ke inbox asli)
+            setTimeout(() => {
+                Swal.fire({
+                    title: '📧 SIMULASI EMAIL',
+                    html: `Sistem seolah-olah mengirim email ke <b>${email}</b>.<br><br>Kode OTP Anda adalah: <h2 style="font-size:26px; font-weight:900; color:#0891b2; margin-top:15px; letter-spacing: 5px;">${currentOTP}</h2>`,
+                    icon: 'info',
+                    confirmButtonText: 'Tutup & Masukkan Kode'
+                });
+            }, 600);
+        }
+
+        function moveToNext(elem, event) {
+            // Berpindah kolom otomatis saat mengetik OTP
+            if (elem.value.length === 1) {
+                let next = elem.nextElementSibling;
+                if (next) next.focus();
+            } else if (elem.value.length === 0 && event.inputType === 'deleteContentBackward') {
+                let prev = elem.previousElementSibling;
+                if (prev) prev.focus();
+            }
+        }
+
+        function verifyOTP() {
+            let enteredOTP = '';
+            document.querySelectorAll('#otp-inputs input').forEach(inp => {
+                enteredOTP += inp.value;
             });
+
+            if(enteredOTP === currentOTP) {
+                // Jika OTP benar, masukkan user ke Database Cloud
+                db.users.push(pendingRegistration);
+                saveDB();
+                
+                closeModal('modal-otp');
+                pendingRegistration = null;
+                currentOTP = null;
+
+                showLoading(() => {
+                    Swal.fire({icon:'success', title:'Berhasil', text:'Email terverifikasi. Akun berhasil dibuat!'});
+                    showLogin();
+                    document.getElementById('form-register').reset();
+                });
+            } else {
+                Swal.fire({icon:'error', title:'Gagal', text:'Kode OTP yang dimasukkan salah!'});
+            }
         }
 
         function handleLogin(e) {
@@ -1503,7 +1554,7 @@
             const order = db.orders.find(o => o.id === orderId);
             if(!order) return;
 
-            let logo = db.settings.logo || 'https://cdn-icons-png.flaticon.com/512/2942/2942821.png';
+            let logo = db.settings.invoiceLogo || db.settings.logo || 'https://cdn-icons-png.flaticon.com/512/2942/2942821.png';
             let company = db.settings.company || 'PERUSAHAAN';
             let coAddress = db.settings.address || '-';
             let coEmail = db.settings.email || '-';
@@ -1737,7 +1788,8 @@
                 confirmButtonText: 'Ya, Hapus!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    db.orders = db.orders.filter(o => o.id !== id);
+                    // Filter menggunakan String() untuk memastikan data terhapus walau formatnya kacau
+                    db.orders = db.orders.filter(o => String(o.id) !== String(id));
                     saveDB();
                     renderOrders(); // Refresh tabel pesanan
                     renderDashboard(); // Refresh angka di dashboard
@@ -1911,7 +1963,7 @@
             const order = db.orders.find(o => o.id === orderId);
             if(!order) return;
 
-            let logo = db.settings.logo || 'https://cdn-icons-png.flaticon.com/512/2942/2942821.png';
+            let logo = db.settings.invoiceLogo || db.settings.logo || 'https://cdn-icons-png.flaticon.com/512/2942/2942821.png';
             let company = db.settings.company || 'PERUSAHAAN';
             let coAddress = db.settings.address || '-';
             let coEmail = db.settings.email || '-';
